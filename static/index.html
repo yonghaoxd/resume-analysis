@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resume Match Checker</title>
+<style>
+:root {
+  --bg: #f5f6f8; --card: #ffffff; --ink: #1c2330; --muted: #667085; --line: #e3e6eb;
+  --accent: #2f5bea; --accent-ink: #ffffff;
+  --good: #16794c; --good-bg: #e5f5ec; --warn: #a15c00; --warn-bg: #fdf1dc;
+  --bad: #b42318; --bad-bg: #fdeceb;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { background: var(--card); border-bottom: 1px solid var(--line); }
+.bar { max-width: 980px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; gap: 24px; }
+.brand { font-weight: 700; font-size: 17px; }
+nav a { color: var(--muted); text-decoration: none; margin-right: 16px; padding: 4px 0; }
+nav a.on { color: var(--accent); border-bottom: 2px solid var(--accent); }
+main { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 24px; margin: 0 0 4px; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+.sub { color: var(--muted); margin: 0 0 20px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+label.t { display: block; font-weight: 600; margin-bottom: 6px; }
+textarea { width: 100%; min-height: 260px; padding: 10px; border: 1px solid var(--line); border-radius: 8px;
+  font: inherit; resize: vertical; background: #fff; color: var(--ink); }
+.drop { border: 1.5px dashed #b9c0cc; border-radius: 8px; padding: 14px; text-align: center; color: var(--muted);
+  cursor: pointer; min-height: 260px; display: flex; flex-direction: column; justify-content: center; }
+.drop.over { border-color: var(--accent); background: #eef2fe; }
+.drop b { color: var(--ink); }
+.or { text-align: center; color: var(--muted); font-size: 13px; margin: 6px 0; }
+button { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink);
+  padding: 8px 14px; cursor: pointer; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; padding: 11px 22px; }
+button:disabled { opacity: .6; cursor: default; }
+button.link { border: 0; background: none; color: var(--bad); padding: 0; }
+.error { background: var(--bad-bg); color: var(--bad); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; }
+.note { color: var(--muted); font-size: 13px; }
+.top { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.ring { width: 132px; height: 132px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.ring > div { width: 104px; height: 104px; border-radius: 50%; background: var(--card); display: grid; place-items: center; text-align: center; }
+.ring .n { font-size: 38px; font-weight: 700; line-height: 1; }
+.ring .o { font-size: 12px; color: var(--muted); }
+.delta { font-weight: 600; font-size: 13px; }
+.up { color: var(--good); } .down { color: var(--bad); } .same { color: var(--muted); }
+.dim { margin-bottom: 14px; }
+.dim-h { display: flex; justify-content: space-between; gap: 12px; font-weight: 600; }
+.track { height: 8px; background: #edeff3; border-radius: 4px; overflow: hidden; margin-top: 5px; }
+.fill { height: 100%; border-radius: 4px; }
+.gl { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .gl { grid-template-columns: 1fr; } }
+.gl h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 6px; }
+.gl ul { margin: 0; padding: 0; list-style: none; }
+.gl li { padding: 6px 0; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+.gl li:first-child { border-top: 0; }
+.pts { flex: none; width: 48px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gain .pts, .gain h3 { color: var(--good); } .loss .pts, .loss h3 { color: var(--bad); }
+.small { color: var(--muted); font-size: 13px; }
+details { border-top: 1px solid var(--line); padding: 12px 0; }
+details:first-of-type { border-top: 0; }
+summary { cursor: pointer; font-weight: 600; display: flex; justify-content: space-between; gap: 12px; }
+details > div { margin-top: 10px; }
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 8px; border-bottom: 1px solid var(--line); }
+td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr.click { cursor: pointer; } tr.click:hover { background: #f8f9fb; }
+.pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.met, .low { background: var(--good-bg); color: var(--good); }
+.partial, .medium { background: var(--warn-bg); color: var(--warn); }
+.missing, .high { background: var(--bad-bg); color: var(--bad); }
+.tag { background: #eef0f4; color: var(--muted); }
+.quote { border-left: 3px solid var(--line); padding-left: 8px; color: var(--muted); font-size: 13px; margin-top: 4px; }
+.chips span { display: inline-block; margin: 0 6px 6px 0; }
+.sug { border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+.sug-h { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.before, .after { border-radius: 6px; padding: 8px 10px; margin-top: 6px; white-space: pre-wrap; }
+.before { background: var(--bad-bg); } .after { background: var(--good-bg); }
+.lab { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; display: block; margin-bottom: 2px; color: var(--muted); }
+.pick { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; }
+.pick input { width: 17px; height: 17px; accent-color: var(--accent); }
+.sug.picked { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.sug-edit { min-height: 0; background: #fff; margin-top: 2px; }
+.applybar { position: sticky; top: 0; z-index: 2; background: var(--card); display: flex; align-items: center; gap: 14px;
+  flex-wrap: wrap; padding: 10px 0; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+.applybar button { margin-left: auto; padding: 8px 18px; }
+.doc { white-space: pre-wrap; border: 1px solid var(--line); border-radius: 8px; padding: 16px; max-height: 560px;
+  overflow: auto; background: #fff; outline: none; }
+.doc:focus { border-color: var(--accent); }
+mark { background: #fff1a8; border-radius: 3px; padding: 0 1px; }
+.warnbox { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; }
+.warnbox ul { margin: 6px 0 0; padding-left: 18px; } .warnbox li { color: var(--ink); margin-bottom: 6px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.spin { display: inline-block; width: 16px; height: 16px; border: 2px solid #c9d3f7; border-top-color: var(--accent);
+  border-radius: 50%; animation: s 0.8s linear infinite; vertical-align: -3px; margin-right: 8px; }
+@keyframes s { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <div class="brand">Resume Match Checker</div>
+  <nav><a href="#new" id="nav-new">New analysis</a><a href="#history" id="nav-history">History</a></nav>
+</div></header>
+<main id="app"></main>
+
+<script>
+const app = document.getElementById('app');
+let pendingJd = '';      // job scope carried over for a re-test
+let chosenFile = null;
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => (Math.round(n * 10) / 10).toString();
+const when = iso => new Date(iso).toLocaleString('en-GB', {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+const tone = pct => pct >= 75 ? 'var(--good)' : pct >= 50 ? '#d98a00' : 'var(--bad)';
+
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  let body = null;
+  try { body = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error((body && body.detail) || `Request failed (${res.status})`);
+  return body;
+}
+
+function deltaHtml(now, before, unit) {
+  if (before == null || now == null) return '';
+  const d = Math.round((now - before) * 10) / 10;
+  if (d === 0) return `<span class="delta same">no change</span>`;
+  return `<span class="delta ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲ +' : '▼ '}${fmt(d)}${unit || ''}</span>`;
+}
+
+/* ---------- New analysis ---------- */
+function renderNew() {
+  chosenFile = null;
+  app.innerHTML = `
+    <h1>Check your resume against a job</h1>
+    <p class="sub">Add your resume and the job scope. You get a 0–100 match score, where points were gained and lost, and concrete edits.</p>
+    <div id="err"></div>
+    <div class="grid2">
+      <div class="card">
+        <label class="t">1. Your resume</label>
+        <div class="drop" id="drop"><b>Choose a file</b> or drop it here<br><span class="note">PDF, DOCX or TXT, up to 10 MB</span></div>
+        <input type="file" id="file" accept=".pdf,.docx,.txt,.md" hidden>
+      </div>
+      <div class="card">
+        <label class="t" for="jd">2. Job scope</label>
+        <textarea id="jd" placeholder="Paste the job description: responsibilities, requirements, qualifications"></textarea>
+      </div>
+    </div>
+    <button class="primary" id="go">Analyze match</button>
+    <p class="note" style="margin-top:12px">Your resume and the job scope are sent to DeepSeek for analysis. Results are saved only on this computer.</p>`;
+
+  const drop = document.getElementById('drop'), file = document.getElementById('file');
+  const jd = document.getElementById('jd');
+  jd.value = pendingJd; pendingJd = '';
+
+  const setFile = f => {
+    chosenFile = f;
+    drop.innerHTML = f ? `<b>${esc(f.name)}</b><br><span class="note">Click to choose a different file</span>`
+                       : `<b>Choose a file</b> or drop it here<br><span class="note">PDF, DOCX or TXT, up to 10 MB</span>`;
+  };
+  drop.onclick = () => file.click();
+  file.onchange = () => setFile(file.files[0] || null);
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+  drop.ondragleave = () => drop.classList.remove('over');
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); };
+
+  document.getElementById('go').onclick = async ev => {
+    const btn = ev.currentTarget, err = document.getElementById('err');
+    err.innerHTML = '';
+    if (!chosenFile) { err.innerHTML = `<div class="error">Upload your resume file.</div>`; return; }
+    if (!jd.value.trim()) { err.innerHTML = `<div class="error">Paste the job scope.</div>`; return; }
+    const fd = new FormData();
+    fd.append('jd_text', jd.value);
+    fd.append('resume_file', chosenFile);
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spin"></span>Analyzing… this usually takes 20–60 seconds`;
+    try {
+      const r = await api('/api/analyze', {method: 'POST', body: fd});
+      location.hash = '#report/' + r.id;
+    } catch (e) {
+      err.innerHTML = `<div class="error">${esc(e.message)}</div>`;
+      btn.disabled = false; btn.textContent = 'Analyze match';
+      window.scrollTo(0, 0);
+    }
+  };
+}
+
+/* ---------- Report ---------- */
+function itemList(items, sign) {
+  if (!items.length) return `<p class="small">Nothing here.</p>`;
+  return '<ul>' + items.map(i => `<li><span class="pts">${i.points == null ? '•' : sign + fmt(i.points)}</span>
+    <span>${esc(i.text)}${i.note ? `<div class="small">${esc(i.note)}</div>` : ''}</span></li>`).join('') + '</ul>';
+}
+
+async function renderReport(id) {
+  app.innerHTML = `<p class="sub">Loading…</p>`;
+  let r;
+  try { r = await api('/api/analysis/' + id); }
+  catch (e) { app.innerHTML = `<div class="error">${esc(e.message)}</div>`; return; }
+
+  const prev = r.previous;
+  const dimsHtml = r.dimensions.map(d => {
+    if (!d.applicable) return `<div class="dim"><div class="dim-h"><span>${esc(d.label)}</span><span class="small">Not required by this job</span></div></div>`;
+    const pct = 100 * d.earned / d.max;
+    return `<div class="dim"><div class="dim-h"><span>${esc(d.label)}</span>
+      <span>${prev ? deltaHtml(d.earned, prev.dimensions[d.key]) + ' &nbsp;' : ''}${fmt(d.earned)} / ${d.max}</span></div>
+      <div class="track"><div class="fill" style="width:${pct}%;background:${tone(pct)}"></div></div></div>`;
+  }).join('');
+
+  const breakdown = r.dimensions.filter(d => d.applicable).map(d => `
+    <details ${d.earned / d.max < 0.75 ? 'open' : ''}>
+      <summary><span>${esc(d.label)}</span><span>${fmt(d.earned)} / ${d.max}</span></summary>
+      <div class="gl">
+        <div class="gain"><h3>Points gained</h3>${itemList(d.gained, '+')}</div>
+        <div class="loss"><h3>Points lost</h3>${itemList(d.lost, '−')}</div>
+      </div>
+    </details>`).join('');
+
+  const statusLabel = {met: 'Met', partial: 'Partial', missing: 'Missing'};
+  const reqRows = r.requirements.map(q => `<tr>
+      <td class="small">${esc(q.id)}</td>
+      <td>${esc(q.text)}<div class="small">${q.importance === 'must' ? 'Must-have' : 'Nice-to-have'} · ${esc(q.category)}</div></td>
+      <td><span class="pill ${q.status}">${statusLabel[q.status]}</span></td>
+      <td>${esc(q.comment)}${q.evidence ? `<div class="quote">“${esc(q.evidence)}”${q.evidence_verified ? '' : ' <i>(quote not found word-for-word in resume)</i>'}</div>` : ''}</td>
+      <td style="white-space:nowrap">${fmt(q.points)} / ${fmt(q.max_points)}</td>
+    </tr>`).join('');
+
+  const chips = (list, cls) => list.map(k => `<span class="pill ${cls}">${esc(k)}</span>`).join('') || '<span class="small">None</span>';
+
+  const canApply = !!r.resume_text && r.suggestions.length > 0;
+  const sugHtml = r.suggestions.map((s, i) => `<div class="sug" data-sug="${i}">
+      <div class="sug-h">${canApply ? `<label class="pick"><input type="checkbox" class="pick-cb" data-i="${i}"> Apply</label>` : ''}<span class="pill ${s.priority}">${s.priority[0].toUpperCase() + s.priority.slice(1)} priority</span>
+        <span class="pill tag">${esc(s.section)}</span>
+        ${s.requirement_ids.map(i => `<span class="pill tag">${esc(i)}</span>`).join('')}</div>
+      ${s.original ? `<div class="before"><span class="lab">Current</span>${esc(s.original)}</div>` : ''}
+      <div class="after"><span class="lab">${s.original ? 'Suggested' : 'Suggested addition'}${canApply ? ' · you can edit this text' : ''}</span>${canApply
+        ? `<textarea class="sug-edit" data-i="${i}" rows="${Math.max(2, Math.ceil(s.suggested.length / 85))}">${esc(s.suggested)}</textarea>`
+        : esc(s.suggested)}</div>
+      <p class="small" style="margin:8px 0 0">${esc(s.reason)}</p>
+    </div>`).join('') || '<p class="small">No suggestions.</p>';
+
+  app.innerHTML = `
+    <div class="card"><div class="top">
+      <div class="ring" style="background:conic-gradient(${tone(r.total)} ${r.total * 3.6}deg, #edeff3 0)">
+        <div><div><div class="n">${r.total}</div><div class="o">out of 100</div></div></div></div>
+      <div style="flex:1;min-width:240px">
+        <h1>${esc(r.job_title)}</h1>
+        <p class="sub" style="margin-bottom:8px">${r.company ? esc(r.company) + ' · ' : ''}${esc(r.resume_name)} · ${when(r.created_at)}</p>
+        ${prev ? `<p style="margin:0 0 8px">${deltaHtml(r.total, prev.total, ' points')} <span class="small">vs. your previous test of this job (${prev.total}, ${when(prev.created_at)})</span></p>` : ''}
+        <p style="margin:0 0 12px">${esc(r.summary)}</p>
+        <div class="actions"><button id="retest">Re-test with an updated resume</button></div>
+      </div>
+    </div></div>
+    <div class="card"><h2>Score by dimension</h2>${dimsHtml}</div>
+    <div class="card"><h2>Where you gained and lost points</h2>${breakdown}</div>
+    <div class="card"><h2>Job requirements checklist</h2><div class="tablewrap"><table>
+      <tr><th>#</th><th>Requirement</th><th>Status</th><th>Why</th><th>Points</th></tr>${reqRows}</table></div></div>
+    <div class="card"><h2>Keywords</h2>
+      <p class="small" style="margin:0 0 6px">Found in your resume</p><div class="chips">${chips(r.keywords.found, 'met')}</div>
+      <p class="small" style="margin:10px 0 6px">Not found</p><div class="chips">${chips(r.keywords.missing, 'missing')}</div></div>
+    <div class="card"><h2>Suggested edits</h2>
+      <p class="small" style="margin:-6px 0 14px">Only add experience or skills you actually have. Text in [brackets] is for you to fill in.</p>
+      ${canApply ? `<div class="applybar">
+          <label class="pick"><input type="checkbox" id="pick-all"> Select all</label>
+          <span class="small" id="pick-count">0 selected</span>
+          <button class="primary" id="apply" disabled>Apply selected edits</button>
+        </div>` : (r.suggestions.length ? `<p class="small">One-click edits are not available for this older analysis. Run a new analysis to use them.</p>` : '')}
+      <div id="apply-err"></div>
+      ${sugHtml}</div>
+    <div id="edited"></div>`;
+
+  if (canApply) setupApply(r);
+  document.getElementById('retest').onclick = () => { pendingJd = r.jd_text || ''; location.hash = '#new'; };
+  window.scrollTo(0, 0);
+}
+
+/* ---------- Apply selected edits ---------- */
+function setupApply(r) {
+  const boxes = [...app.querySelectorAll('.pick-cb')];
+  const all = document.getElementById('pick-all'), btn = document.getElementById('apply');
+  const count = document.getElementById('pick-count'), err = document.getElementById('apply-err');
+  const refresh = () => {
+    const n = boxes.filter(b => b.checked).length;
+    count.textContent = `${n} of ${boxes.length} selected`;
+    btn.disabled = n === 0;
+    all.checked = n === boxes.length;
+    boxes.forEach(b => b.closest('.sug').classList.toggle('picked', b.checked));
+  };
+  boxes.forEach(b => b.onchange = refresh);
+  all.onchange = () => { boxes.forEach(b => b.checked = all.checked); refresh(); };
+  refresh();
+
+  const collect = () => boxes.filter(b => b.checked).map(b => ({
+    index: +b.dataset.i,
+    suggested: app.querySelector(`.sug-edit[data-i="${b.dataset.i}"]`).value,
+  }));
+  // Asked in the page itself: browser confirm() dialogs can be blocked silently.
+  btn.onclick = () => {
+    const edits = collect();
+    const unfilled = edits.filter(e => /\[[^\]\n]{1,40}\]/.test(e.suggested));
+    if (!unfilled.length) return run(edits);
+    const n = unfilled.length;
+    err.innerHTML = `<div class="warnbox"><b>${n} selected edit${n > 1 ? 's' : ''} still contain${n > 1 ? '' : 's'} [placeholders] you have not filled in.</b>
+      <div class="actions" style="margin-top:8px"><button id="apply-anyway">Apply anyway</button><button id="apply-back">Let me fill them in first</button></div>
+      <div class="small" style="margin-top:6px">If you apply anyway, the placeholders stay in the text and you can fill them in afterwards.</div></div>`;
+    document.getElementById('apply-anyway').onclick = () => run(collect());
+    document.getElementById('apply-back').onclick = () => {
+      err.innerHTML = '';
+      const first = app.querySelector(`.sug-edit[data-i="${unfilled[0].index}"]`);
+      first.scrollIntoView({behavior: 'smooth', block: 'center'}); first.focus();
+    };
+  };
+  const run = async edits => {
+    err.innerHTML = '';
+    btn.disabled = true;
+    try {
+      const out = await api('/api/apply', {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({analysis_id: r.id, edits})});
+      renderEdited(r, out);
+    } catch (e) { err.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+    btn.disabled = false;
+  };
+}
+
+function renderEdited(r, out) {
+  const box = document.getElementById('edited');
+  const body = out.segments.map(s => s.changed ? `<mark>${esc(s.text)}</mark>` : esc(s.text)).join('');
+  const done = out.applied.length + out.appended.length;
+  const notes = [];
+  if (out.appended.length) notes.push(`<div class="warnbox">${out.appended.length} addition${out.appended.length > 1 ? 's were' : ' was'} placed at the end because the matching section heading was not found. Move ${out.appended.length > 1 ? 'them' : 'it'} to the right place.</div>`);
+  if (out.not_applied.length) notes.push(`<div class="warnbox"><b>${out.not_applied.length} edit${out.not_applied.length > 1 ? 's' : ''} could not be applied automatically.</b> Paste ${out.not_applied.length > 1 ? 'them' : 'it'} in by hand:
+      <ul>${out.not_applied.map(n => `<li>${esc(n.suggested)}<div class="small">${esc(n.reason)}</div></li>`).join('')}</ul></div>`);
+  box.innerHTML = `<div class="card"><h2>Your edited resume</h2>
+      <p class="small" style="margin:-6px 0 12px">${done} edit${done === 1 ? '' : 's'} applied, highlighted below. You can keep editing the text here before you copy, download or re-score it.</p>
+      ${notes.join('')}
+      <div class="doc" id="doc" contenteditable="true" spellcheck="false">${body}</div>
+      <div id="edited-err"></div>
+      <div class="actions" style="margin-top:14px">
+        <button class="primary" id="rescore">Re-score this version</button>
+        <button id="dl">Download Word (.docx)</button>
+        <button id="copy">Copy text</button>
+      </div>
+      <p class="small" style="margin:10px 0 0">The Word file uses simple formatting and does not keep the layout of your original file.</p></div>`;
+  const text = () => document.getElementById('doc').innerText.replace(/ /g, ' ');
+  const fail = e => document.getElementById('edited-err').innerHTML = `<div class="error" style="margin-top:12px">${esc(e.message)}</div>`;
+
+  document.getElementById('copy').onclick = async ev => {
+    try { await navigator.clipboard.writeText(text()); ev.target.textContent = 'Copied'; setTimeout(() => ev.target.textContent = 'Copy text', 1500); }
+    catch (e) { fail(new Error('Could not copy. Select the text and copy it manually.')); }
+  };
+  document.getElementById('dl').onclick = async () => {
+    try {
+      const res = await fetch('/api/export-docx', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({text: text()})});
+      if (!res.ok) throw new Error('Could not create the Word file.');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(await res.blob()); a.download = 'resume-edited.docx';
+      document.body.appendChild(a); a.click(); a.remove();
+    } catch (e) { fail(e); }
+  };
+  document.getElementById('rescore').onclick = async ev => {
+    const btn = ev.currentTarget;
+    const fd = new FormData();
+    fd.append('jd_text', r.jd_text); fd.append('resume_text', text()); fd.append('resume_label', 'Edited resume');
+    btn.disabled = true; btn.innerHTML = `<span class="spin"></span>Scoring… 20–60 seconds`;
+    try { const nr = await api('/api/analyze', {method: 'POST', body: fd}); location.hash = '#report/' + nr.id; }
+    catch (e) { fail(e); btn.disabled = false; btn.textContent = 'Re-score this version'; }
+  };
+  box.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+/* ---------- History ---------- */
+async function renderHistory() {
+  app.innerHTML = `<p class="sub">Loading…</p>`;
+  let rows;
+  try { rows = await api('/api/history'); }
+  catch (e) { app.innerHTML = `<div class="error">${esc(e.message)}</div>`; return; }
+  if (!rows.length) {
+    app.innerHTML = `<h1>History</h1><div class="card"><p style="margin:0">No analyses yet. <a href="#new">Run your first one</a>.</p></div>`;
+    return;
+  }
+  // rows are newest first; the previous test of the same job is the next older row with the same jd_hash
+  const body = rows.map((row, i) => {
+    const older = rows.slice(i + 1).find(o => o.jd_hash === row.jd_hash);
+    return `<tr class="click" data-id="${row.id}">
+      <td>${when(row.created_at)}</td>
+      <td><b>${esc(row.job_title)}</b>${row.company ? `<div class="small">${esc(row.company)}</div>` : ''}</td>
+      <td class="small">${esc(row.resume_name)}</td>
+      <td><b style="color:${tone(row.total)}">${row.total}</b></td>
+      <td>${older ? deltaHtml(row.total, older.total) : '<span class="small">first test</span>'}</td>
+      <td><button class="link" data-del="${row.id}">Delete</button></td></tr>`;
+  }).join('');
+  app.innerHTML = `<h1>History</h1><p class="sub">Saved on this computer. Change shows the difference from your previous test of the same job.</p>
+    <div class="card"><div class="tablewrap"><table>
+    <tr><th>Date</th><th>Job</th><th>Resume</th><th>Score</th><th>Change</th><th></th></tr>${body}</table></div></div>`;
+  app.querySelectorAll('tr.click').forEach(tr => tr.onclick = async e => {
+    const del = e.target.dataset.del;
+    if (del) {
+      // Two clicks instead of a confirm() dialog, which can be blocked silently.
+      if (!e.target.dataset.armed) {
+        e.target.dataset.armed = '1'; e.target.textContent = 'Click again to delete';
+        setTimeout(() => { if (e.target.isConnected) { delete e.target.dataset.armed; e.target.textContent = 'Delete'; } }, 4000);
+        return;
+      }
+      try { await api('/api/analysis/' + del, {method: 'DELETE'}); } catch (err) { e.target.textContent = 'Could not delete'; return; }
+      renderHistory();
+    } else location.hash = '#report/' + tr.dataset.id;
+  });
+}
+
+function route() {
+  const h = location.hash || '#new';
+  document.getElementById('nav-new').classList.toggle('on', h === '#new');
+  document.getElementById('nav-history').classList.toggle('on', h === '#history');
+  if (h.startsWith('#report/')) renderReport(h.slice(8));
+  else if (h === '#history') renderHistory();
+  else renderNew();
+}
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
